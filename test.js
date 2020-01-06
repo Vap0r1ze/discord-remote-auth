@@ -5,9 +5,11 @@ const fs = require('fs')
 const client = new RemoteAuthClient({
   debug: true
 })
+
 client.on('pendingRemoteInit', fingerprint => {
   const qrCodeStream = fs.createWriteStream('code.png')
-  https.get(`https://api.qrserver.com/v1/create-qr-code/?size=250x250&data=https://discordapp.com/ra/${fingerprint}`, (res) => {
+  const data = `https://discordapp.com/ra/${fingerprint}`
+  https.get(`https://api.qrserver.com/v1/create-qr-code/?size=250x250&data=${data}`, res => {
     res.pipe(qrCodeStream)
   })
   qrCodeStream.once('close', () => {
@@ -15,9 +17,14 @@ client.on('pendingRemoteInit', fingerprint => {
   })
 })
 client.on('pendingFinish', user => {
+  fs.unlinkSync('code.png')
   console.log('Incoming User:', user)
 })
 client.on('finish', token => {
   console.log('Token:', token)
 })
+client.on('close', () => {
+  if (fs.existsSync('code.png')) fs.unlinkSync('code.png')
+})
+
 client.connect()
