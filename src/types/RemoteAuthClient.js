@@ -15,6 +15,7 @@ class RemoteAuthClient extends EventEmitter {
       modulusLength: 2048,
       e: 0x010001
     })
+    this.canceled = false
     this._ping = null
     this._lastHeartbeat = null
   }
@@ -35,6 +36,7 @@ class RemoteAuthClient extends EventEmitter {
     this.ws.onclose = () => {
       if (this.debug) this.log(red('DISCONNECTED'))
       this.intervals.forEach(x => clearInterval(x))
+      this.emit('close')
     }
   }
   send (data) {
@@ -92,6 +94,7 @@ class RemoteAuthClient extends EventEmitter {
         this.emit('finish', decryptedToken)
       break
       case 'cancel':
+        this.canceled = true
         this.emit('cancel')
       break
       case 'heartbeat_ack':
