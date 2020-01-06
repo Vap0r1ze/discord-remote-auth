@@ -11,9 +11,7 @@ const { RemoteAuthClient } = require('./')
 const https = require('https')
 const fs = require('fs')
 
-const client = new RemoteAuthClient({
-  debug: true
-})
+const client = new RemoteAuthClient()
 
 client.on('pendingRemoteInit', fingerprint => {
   const qrCodeStream = fs.createWriteStream('code.png')
