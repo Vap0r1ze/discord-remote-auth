@@ -7,7 +7,7 @@ npm install discord-remote-auth
 
 ### Usage
 ```js
-const { RemoteAuthClient } = require('./')
+const { RemoteAuthClient } = require('discord-remote-auth')
 const https = require('https')
 const fs = require('fs')
 
