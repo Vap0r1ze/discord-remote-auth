@@ -1,14 +1,30 @@
 {
   "name": "discord-remote-auth",
-  "version": "1.0.2",
+  "version": "1.0.3",
   "description": "Socket wrapper for discord's remote auth gateway",
   "main": "src/index.js",
   "scripts": {
     "test": "node test.js"
   },
-  "keywords": [],
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Vap0r1ze/discord-remote-auth.git"
+  },
+  "keywords": [
+    "api",
+    "auth",
+    "code",
+    "discord",
+    "qr",
+    "qrcode",
+    "remote"
+  ],
   "author": "Vap0r1ze",
   "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/Vap0r1ze/discord-remote-auth/issues"
+  },
+  "homepage": "https://github.com/Vap0r1ze/discord-remote-auth",
   "dependencies": {
     "colorette": "^1.1.0",
     "eventemitter3": "^4.0.0",
