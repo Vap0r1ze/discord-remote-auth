@@ -23,7 +23,11 @@ class RemoteAuthClient extends EventEmitter {
     console.log(magenta('[RemoteAuthClient]'), info)
   }
   connect () {
-    this.ws = new WebSocket('wss://remote-auth-gateway.discord.gg/?v=1')
+    this.ws = new WebSocket('wss://remote-auth-gateway.discord.gg/?v=1', {
+      headers: {
+        'Origin': 'https://discord.com'
+      }
+    })
     this.ws.onmessage = message => {
       if (this.debug) this.log(blue(`<- ${message.data}}`))
       try {
