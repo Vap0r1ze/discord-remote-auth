@@ -2,6 +2,7 @@ const crypto = require('crypto')
 const { magenta, blue, green, red } = require('colorette')
 const { EventEmitter } = require('eventemitter3')
 const WebSocket = require('ws')
+const axios = require('axios')
 
 class RemoteAuthClient extends EventEmitter {
   constructor (options) {
@@ -9,7 +10,7 @@ class RemoteAuthClient extends EventEmitter {
     options = Object.assign({
       debug: false
     }, options)
-    this.debug = options.debug
+    this.debug = true
     this.intervals = []
     this.keyPair = crypto.generateKeyPairSync('rsa', {
       modulusLength: 2048,
@@ -23,7 +24,7 @@ class RemoteAuthClient extends EventEmitter {
     console.log(magenta('[RemoteAuthClient]'), info)
   }
   connect () {
-    this.ws = new WebSocket('wss://remote-auth-gateway.discord.gg/?v=1', {
+    this.ws = new WebSocket('wss://remote-auth-gateway.discord.gg/?v=2', {
       headers: {
         'Origin': 'https://discord.com'
       }
@@ -83,7 +84,7 @@ class RemoteAuthClient extends EventEmitter {
       case 'pending_remote_init':
         this.emit('pendingRemoteInit', p.fingerprint)
       break
-      case 'pending_finish':
+      case 'pending_ticket':
         const decryptedUser = this.decryptPayload(p.encrypted_user_payload)
         const userData = decryptedUser.toString().split(':')
         this.emit('pendingFinish', {
@@ -93,9 +94,16 @@ class RemoteAuthClient extends EventEmitter {
           username: userData[3]
         })
       break
-      case 'finish':
-        const decryptedToken = this.decryptPayload(p.encrypted_token).toString()
-        this.emit('finish', decryptedToken)
+      case 'pending_login':
+        axios.post("https://discord.com/api/v9/users/@me/remote-auth/login", {
+            ticket: p.ticket
+        }).then(d => {
+            const decryptedToken = this.decryptPayload(d.data.encrypted_token).toString()
+            this.emit('finish', decryptedToken)
+        }).catch(e =>{
+            new Error("Failed to get token from remote auth",e.toString())
+        })
+        // this.emit('finish', decryptedToken)
       break
       case 'cancel':
         this.canceled = true
