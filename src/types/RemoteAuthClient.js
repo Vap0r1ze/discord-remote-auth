@@ -2,7 +2,21 @@ const crypto = require('crypto')
 const { magenta, blue, green, red } = require('colorette')
 const { EventEmitter } = require('eventemitter3')
 const WebSocket = require('ws')
-const axios = require('axios')
+const axios = require('axios').create({
+  baseURL: 'https://discord.com/api/v9',
+  validateStatus: false,
+  headers: {
+    "accept-language": "en-US,en;q=0.8",
+    "cache-control": "no-cache",
+    "pragma": "no-cache",
+    "referer": "https://discord.com/login",
+    "sec-fetch-dest": "empty",
+    "sec-fetch-mode": "cors",
+    "sec-fetch-site": "same-origin",
+    "sec-gpc": 1,
+    "user-agent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/105.0.0.0 Safari/537.36"
+  }
+})
 
 class RemoteAuthClient extends EventEmitter {
   constructor (options) {
