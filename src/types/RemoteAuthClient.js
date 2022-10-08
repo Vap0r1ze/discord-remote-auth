@@ -10,7 +10,7 @@ class RemoteAuthClient extends EventEmitter {
     options = Object.assign({
       debug: false
     }, options)
-    this.debug = true
+    this.debug = options.debug
     this.intervals = []
     this.keyPair = crypto.generateKeyPairSync('rsa', {
       modulusLength: 2048,
