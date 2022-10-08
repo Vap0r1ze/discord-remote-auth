@@ -2,6 +2,21 @@ const crypto = require('crypto')
 const { magenta, blue, green, red } = require('colorette')
 const { EventEmitter } = require('eventemitter3')
 const WebSocket = require('ws')
+const axios = require('axios').create({
+  baseURL: 'https://discord.com/api/v9',
+  validateStatus: false,
+  headers: {
+    "accept-language": "en-US,en;q=0.8",
+    "cache-control": "no-cache",
+    "pragma": "no-cache",
+    "referer": "https://discord.com/login",
+    "sec-fetch-dest": "empty",
+    "sec-fetch-mode": "cors",
+    "sec-fetch-site": "same-origin",
+    "sec-gpc": 1,
+    "user-agent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/105.0.0.0 Safari/537.36"
+  }
+})
 
 class RemoteAuthClient extends EventEmitter {
   constructor (options) {
@@ -23,7 +38,7 @@ class RemoteAuthClient extends EventEmitter {
     console.log(magenta('[RemoteAuthClient]'), info)
   }
   connect () {
-    this.ws = new WebSocket('wss://remote-auth-gateway.discord.gg/?v=1', {
+    this.ws = new WebSocket('wss://remote-auth-gateway.discord.gg/?v=2', {
       headers: {
         'Origin': 'https://discord.com'
       }
@@ -83,7 +98,7 @@ class RemoteAuthClient extends EventEmitter {
       case 'pending_remote_init':
         this.emit('pendingRemoteInit', p.fingerprint)
       break
-      case 'pending_finish':
+      case 'pending_ticket':
         const decryptedUser = this.decryptPayload(p.encrypted_user_payload)
         const userData = decryptedUser.toString().split(':')
         this.emit('pendingFinish', {
@@ -93,9 +108,16 @@ class RemoteAuthClient extends EventEmitter {
           username: userData[3]
         })
       break
-      case 'finish':
-        const decryptedToken = this.decryptPayload(p.encrypted_token).toString()
-        this.emit('finish', decryptedToken)
+      case 'pending_login':
+        axios.post("https://discord.com/api/v9/users/@me/remote-auth/login", {
+            ticket: p.ticket
+        }).then(d => {
+            const decryptedToken = this.decryptPayload(d.data.encrypted_token).toString()
+            this.emit('finish', decryptedToken)
+        }).catch(e =>{
+            new Error("Failed to get token from remote auth",e.toString())
+        })
+        // this.emit('finish', decryptedToken)
       break
       case 'cancel':
         this.canceled = true
