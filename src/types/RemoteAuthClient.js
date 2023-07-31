@@ -34,6 +34,7 @@ class RemoteAuthClient extends EventEmitter {
     this.canceled = false
     this._ping = null
     this._lastHeartbeat = null
+    this._pendingCaptcha = null
   }
   log(info) {
     console.log(magenta('[RemoteAuthClient]'), info)
@@ -58,6 +59,9 @@ class RemoteAuthClient extends EventEmitter {
       this.intervals.forEach(x => clearInterval(x))
       this.emit('close')
     }
+  }
+  disconnect() {
+    if (this.ws.readyState === WebSocket.OPEN) this.ws.close()
   }
   send(data) {
     const dataStr = JSON.stringify(data)
@@ -111,14 +115,55 @@ class RemoteAuthClient extends EventEmitter {
         break
       case 'pending_login':
         const fetch = globalThis.fetch || require('node-fetch')
+
+        const headers = { ...COMMON_FETCH.headers }
+        if (this._pendingCaptcha?.service === 'hcaptcha') {
+          headers['x-captcha-key'] = this._pendingCaptcha.data.key
+          headers['x-captcha-rqtoken'] = this._pendingCaptcha.data.rqtoken
+        }
+
         fetch('https://discord.com/api/v9/users/@me/remote-auth/login', {
           body: JSON.stringify({ ticket: p.ticket }),
           method: 'POST',
-          ...COMMON_FETCH
+          referrer: COMMON_FETCH.referrer,
+          headers,
         }).then(async response => {
           const data = await response.json()
-          const decryptedToken = this.decryptPayload(data.encrypted_token).toString()
-          this.emit('finish', decryptedToken)
+
+          if (response.status === 200) {
+            this._pendingCaptcha = null
+            const decryptedToken = this.decryptPayload(data.encrypted_token).toString()
+            this.emit('finish', decryptedToken)
+          } if (response.status === 400 && ['captcha-required', 'invalid-response'].includes(data.captcha_key?.[0])) {
+            switch (data.captcha_service) {
+              case 'hcaptcha':
+                if (this._pendingCaptcha) {
+                  this._pendingCaptcha.data.key = null
+                  this._pendingCaptcha.retries++
+                  this._pendingCaptcha.data.rqtoken = data.captcha_rqtoken
+                } else {
+                  this._pendingCaptcha = {
+                    ticket: p.ticket,
+                    service: 'hcaptcha',
+                    retries: 0,
+                    data: {
+                      key: null,
+                      rqtoken: data.captcha_rqtoken,
+                    },
+                  }
+                }
+                this.emit('hcaptcha', {
+                  sitekey: data.captcha_sitekey,
+                  rqdata: data.captcha_rqdata,
+                  pageurl: 'https://discord.com/login',
+                  userAgent: COMMON_FETCH.headers['user-agent'],
+                  retries: this._pendingCaptcha.retries,
+                })
+                break
+              default:
+                throw new Error(`Unknown captcha service: "${data.captcha_service}"`)
+            }
+          }
         }).catch(e => {
           new Error('Failed to get token from remote auth', e.toString())
         })
@@ -132,6 +177,18 @@ class RemoteAuthClient extends EventEmitter {
         break
     }
     this.emit('raw', p)
+  }
+  solveCaptcha(key) {
+    if (!this._pendingCaptcha) throw new Error('No captcha pending')
+    switch (this._pendingCaptcha.service) {
+      case 'hcaptcha':
+        this._pendingCaptcha.data.key = key
+        this.onMessage({
+          op: 'pending_login',
+          ticket: this._pendingCaptcha.ticket,
+        })
+        break
+    }
   }
 }
 

@@ -9,6 +9,12 @@ interface EventTypes {
         avatar: string | null,
         username: string,
     }]
+    hcaptcha: [{
+        sitekey: string,
+        pageurl: string,
+        rqdata: string,
+        userAgent: string,
+    }],
     finish: [token: string]
     cancel: []
     close: []
@@ -24,4 +30,6 @@ export class RemoteAuthClient extends EventEmitter<EventTypes> {
     canceled: boolean
 
     connect(): void
+    disconnect(): void
+    solveCaptcha(key: string)
 }
