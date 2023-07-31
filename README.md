@@ -16,7 +16,7 @@ const client = new RemoteAuthClient()
 client.on('pendingRemoteInit', fingerprint => {
   const qrCodeStream = fs.createWriteStream('code.png')
   const data = `https://discordapp.com/ra/${fingerprint}`
-  https.get(`https://api.qrserver.com/v1/create-qr-code/?size=250x250&data=${data}`, res => {
+  https.get(`https://kissapi-qrcode.vercel.app/api/qrcode?chs=250x250&chl=${data}`, res => {
     res.pipe(qrCodeStream)
   })
   qrCodeStream.once('close', () => {
