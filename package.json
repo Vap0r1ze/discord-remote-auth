@@ -1,8 +1,9 @@
 {
   "name": "discord-remote-auth",
-  "version": "2.0.1",
+  "version": "2.0.2",
   "description": "Socket wrapper for discord's remote auth gateway",
   "main": "src/index.js",
+  "types": "src/index.d.ts",
   "scripts": {
     "test": "node test.js"
   },
