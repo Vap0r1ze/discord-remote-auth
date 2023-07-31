@@ -20,7 +20,7 @@ const COMMON_FETCH = {
 }
 
 class RemoteAuthClient extends EventEmitter {
-  constructor (options) {
+  constructor(options) {
     super()
     options = Object.assign({
       debug: false
@@ -35,10 +35,10 @@ class RemoteAuthClient extends EventEmitter {
     this._ping = null
     this._lastHeartbeat = null
   }
-  log (info) {
+  log(info) {
     console.log(magenta('[RemoteAuthClient]'), info)
   }
-  connect () {
+  connect() {
     this.ws = new WebSocket('wss://remote-auth-gateway.discord.gg/?v=2', {
       headers: {
         'Origin': 'https://discord.com'
@@ -59,22 +59,22 @@ class RemoteAuthClient extends EventEmitter {
       this.emit('close')
     }
   }
-  send (data) {
+  send(data) {
     const dataStr = JSON.stringify(data)
     if (this.debug) this.log(green(`-> ${dataStr}`))
     this.ws.send(dataStr)
   }
-  sendHeartbeat () {
+  sendHeartbeat() {
     this._lastHeartbeat = Date.now()
     this.send({ op: 'heartbeat' })
   }
-  decryptPayload (payload) {
+  decryptPayload(payload) {
     return crypto.privateDecrypt({
       oaepHash: 'sha256',
       key: this.keyPair.privateKey
     }, Buffer.from(payload, 'base64'))
   }
-  onMessage (p) {
+  onMessage(p) {
     switch (p.op) {
       case 'hello':
         const encodedPublicKey = this.keyPair.publicKey.export({
@@ -86,7 +86,7 @@ class RemoteAuthClient extends EventEmitter {
           op: 'init',
           encoded_public_key: encodedPublicKey
         })
-      break
+        break
       case 'nonce_proof':
         const decryptedNonce = this.decryptPayload(p.encrypted_nonce)
         const nonceHash = crypto.createHash('sha256')
@@ -95,10 +95,10 @@ class RemoteAuthClient extends EventEmitter {
           op: 'nonce_proof',
           proof: nonceHash.digest('base64').replace(/=+$/, '').replace(/\+/g, '-').replace(/\//g, '_')
         })
-      break
+        break
       case 'pending_remote_init':
         this.emit('pendingRemoteInit', p.fingerprint)
-      break
+        break
       case 'pending_ticket':
         const decryptedUser = this.decryptPayload(p.encrypted_user_payload)
         const userData = decryptedUser.toString().split(':')
@@ -108,29 +108,28 @@ class RemoteAuthClient extends EventEmitter {
           avatar: userData[2],
           username: userData[3]
         })
-      break
+        break
       case 'pending_login':
         const fetch = globalThis.fetch || require('node-fetch')
         fetch('https://discord.com/api/v9/users/@me/remote-auth/login', {
-          body: JSON.stringify({ticket: p.ticket}),
+          body: JSON.stringify({ ticket: p.ticket }),
           method: 'POST',
           ...COMMON_FETCH
         }).then(async response => {
           const data = await response.json()
           const decryptedToken = this.decryptPayload(data.encrypted_token).toString()
           this.emit('finish', decryptedToken)
-        }).catch(e =>{
+        }).catch(e => {
           new Error('Failed to get token from remote auth', e.toString())
         })
-        // this.emit('finish', decryptedToken)
-      break
+        break
       case 'cancel':
         this.canceled = true
         this.emit('cancel')
-      break
+        break
       case 'heartbeat_ack':
         this._ping = Date.now() - this._lastHeartbeat
-      break
+        break
     }
     this.emit('raw', p)
   }
